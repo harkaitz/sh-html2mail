@@ -1,0 +1,137 @@
+#!/bin/sh -e
+#L:
+#L:  MIT License
+#L:  
+#l:  Bug reports, feature requests to gemini|https://harkadev.com/oss
+#l:  Copyright (c) 2022 Harkaitz Agirre, harkaitz.aguirre@gmail.com
+#L:
+#L:  Permission is hereby granted, free of charge, to any person obtaining
+#L:  a copy of this software and associated documentation files (the
+#L:  "Software"), to deal in the Software without restriction, including
+#L:  without limitation the rights to use, copy, modify, merge, publish,
+#L:  distribute, sublicense, and/or sell copies of the Software, and to
+#L:  permit persons to whom the Software is furnished to do so, subject to
+#L:  the following conditions:
+#L:
+#L:  The above copyright notice and this permission notice shall be
+#L:  included in all copies or substantial portions of the Software.
+#L:
+#L:  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+#L:  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+#L:  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+#L:  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+#L:  LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+#L:  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+#L:  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+##:
+#h: Usage: $0 [-D DIR][-s SUBJECT][-t TO] HTML-FILE > MAIL
+#h:
+#h: Convert a local HTML file into a multipart that can be sent with
+#h: msmtp(1) or sendmail(1). Links that start with "/" will be searched
+#h: for in "DIR" if specified.
+##:
+## -----------------------------------------------------------------------------
+html2mail() {
+    local HTML2MAIL_DIR_ABS='' HTML2MAIL_DIR_REL=''
+    local OPTIND optopt  html='' links='' tmp='' sep='' sub='' to='' cid='' file='' mime=''
+    ## Parse command line arguments.
+    while getopts "D:s:t:" optopt; do
+          case $optopt in
+              D)  HTML2MAIL_DIR_ABS="${OPTARG}";;
+              t)  to="${OPTARG}";;
+              s)  sub="${OPTARG}";;
+              \?) return 1;;
+          esac
+    done
+    shift $(( $OPTIND - 1 ))
+    if test ! -n "${1}"; then
+        hlog error "Please specify an HTML file."; return 1
+    elif test ! -f "${1}"; then
+        hlog error "File '${1}' does not exist."; return 1
+    else
+        html="$1"; shift
+        HTML2MAIL_DIR_REL="`dirname "${html}"`"
+    fi
+    sep="`md5sum "${html}" | sed 's| .*||'`"
+    tmp="`mktemp`"
+    ##
+    links="`html2 < "${html}" | sed -n '
+    s|.*img/@src=||p
+    s|.*head/link/@href=||p
+    '`"
+    sed=""
+    for link in ${links}; do
+        cid="` html2mail_url2cid  "${link}"`"
+        file="`html2mail_url2file "${link}"`"
+        sed="${sed}s|${link}|cid:${cid}|g
+        "
+        if test -f "${file}"; then
+            mime="`file -ib ${file}`"
+            echo "--${sep}"
+            echo "Content-ID: <${cid}>"
+            echo "Content-Disposition: inline"
+            echo "Content-Type: ${mime}"
+            echo "Content-Transfer-Encoding: base64"
+            echo ""
+            base64 "${file}"
+        fi >> "${tmp}"
+    done
+    if test -n "${to}"; then
+        echo "To: ${to}"
+    fi
+    if test -n "${sub}"; then
+        echo "Subject: ${sub}"
+    fi
+    echo "MIME-Version: 1.0"
+    echo "Content-Type: multipart/report; boundary=\"${sep}\""
+    echo ""
+    echo "--${sep}"
+    echo "Content-Type: text/html; charset=UTF-8"
+    echo "Content-Disposition: inline"
+    echo ""
+    sed "${sed}" "${html}"
+    echo ""
+    cat "${tmp}"    
+}
+html2mail_check_programs() {
+    local ret=0
+    if ! which "html2" >/dev/null 2>&1; then
+        error "Command 'html2' not found."
+        ret=1
+    fi
+    if ! which "mktemp" >/dev/null 2>&1; then
+        error "Command 'mktemp' not found."
+        ret=1
+    fi
+    if ! which "md5sum" >/dev/null 2>&1; then
+        error "Command 'md5sum' not found."
+        ret=1
+    fi
+    return ${ret}
+}
+html2mail_url2cid() {
+    echo -n "$1" | md5sum | sed 's| .*||;s|^||'
+}
+html2mail_url2file() {
+    case "${1}" in
+        /*)    test ! -n "${HTML2MAIL_DIR_ABS}" || echo "${HTML2MAIL_DIR_ABS}${1}";;
+        *://*) true;;
+        *)     echo "${HTML2MAIL_DIR_REL}/${1}";;
+    esac
+}
+## -----------------------------------------------------------------------------
+error() { echo "${SCRNAME}: error: $*" >&2; }
+html2mail_check_programs
+SCRNAME="`basename "$0"`"
+if test @"${SCRNAME}" = @"html2mail";then
+    case "${1}" in
+        ''|-h|--help)
+            sed -n 's/^ *#h: \{0,1\}//p' "$0" | sed "s|\\\$0|${SCRNAME}|g"
+            echo ""
+            sed -n 's/^ *#l: \{0,2\}//p' "$0"
+            ;;
+        *)
+            html2mail "$@"
+            ;;
+    esac
+fi
