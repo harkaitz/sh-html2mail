@@ -29,6 +29,10 @@
 #h: Convert a local HTML file into a multipart that can be sent with
 #h: msmtp(1) or sendmail(1). Links that start with "/" will be searched
 #h: for in "DIR" if specified.
+#h:
+#h: Remember:
+#h:
+#h: 1.- GMail doesn't support linking css, must be inline.
 ##:
 ## -----------------------------------------------------------------------------
 html2mail() {
@@ -66,14 +70,27 @@ html2mail() {
         sed="${sed}s|${link}|cid:${cid}|g
         "
         if test -f "${file}"; then
-            mime="`file -ib ${file}`"
+            case "${file}" in
+                *.css) mime="text/css; charset=UTF-8";;
+                *)     mime="`file -ib ${file}`";;
+            esac
             echo "--${sep}"
             echo "Content-ID: <${cid}>"
-            echo "Content-Disposition: inline"
-            echo "Content-Type: ${mime}"
-            echo "Content-Transfer-Encoding: base64"
-            echo ""
-            base64 "${file}"
+            
+            case "${mime}" in
+                *image*)
+                    echo "Content-Type: ${mime}"
+                    echo "Content-Disposition: inline"
+                    echo "Content-Transfer-Encoding: base64"
+                    echo ""
+                    base64 "${file}"
+                    ;;
+                *)
+                    echo "Content-Type: ${mime}"
+                    echo ""
+                    cat "${file}"
+                    ;;
+            esac
         fi >> "${tmp}"
     done
     if test -n "${to}"; then
@@ -83,7 +100,7 @@ html2mail() {
         echo "Subject: ${sub}"
     fi
     echo "MIME-Version: 1.0"
-    echo "Content-Type: multipart/report; boundary=\"${sep}\""
+    echo "Content-Type: multipart/alternative; boundary=\"${sep}\""
     echo ""
     echo "--${sep}"
     echo "Content-Type: text/html; charset=UTF-8"
@@ -91,7 +108,8 @@ html2mail() {
     echo ""
     sed "${sed}" "${html}"
     echo ""
-    cat "${tmp}"    
+    cat "${tmp}"
+    echo "--${sep}--"
 }
 html2mail_check_programs() {
     local ret=0

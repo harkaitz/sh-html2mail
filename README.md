@@ -1,7 +1,7 @@
 # HTML2MAIL
 
 This little scripts bundles an html file and all it's css/images in
-a multipart email so that you can send it by mail.
+a multipart email so that you can send it by sendmail/msmtp.
 
 Example 1:
 
@@ -24,6 +24,10 @@ html2mail
     Convert a local HTML file into a multipart that can be sent with
     msmtp(1) or sendmail(1). Links that start with "/" will be searched
     for in "DIR" if specified.
+    
+    Remember:
+    
+    1.- GMail doesn't support linking css, must be inline.
 
 ## Collaborating
 
