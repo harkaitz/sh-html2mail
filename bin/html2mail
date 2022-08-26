@@ -24,7 +24,7 @@
 #L:  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 #L:  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ##:
-#h: Usage: $0 [-D DIR][-s SUBJECT][-t TO] HTML-FILE > MAIL
+#h: Usage: $0 [-D DIR][-s SUBJECT][-t TO][-n name] HTML-FILE > MAIL
 #h:
 #h: Convert a local HTML file into a multipart that can be sent with
 #h: msmtp(1) or sendmail(1). Links that start with "/" will be searched
@@ -36,14 +36,15 @@
 ##:
 ## -----------------------------------------------------------------------------
 html2mail() {
-    local HTML2MAIL_DIR_ABS='' HTML2MAIL_DIR_REL=''
+    local HTML2MAIL_DIR_ABS='' HTML2MAIL_DIR_REL='' names=''
     local OPTIND optopt  html='' links='' tmp='' sep='' sub='' to='' cid='' file='' mime=''
     ## Parse command line arguments.
-    while getopts "D:s:t:" optopt; do
+    while getopts "D:s:t:n:" optopt; do
           case $optopt in
               D)  HTML2MAIL_DIR_ABS="${OPTARG}";;
               t)  to="${OPTARG}";;
               s)  sub="${OPTARG}";;
+              n)  names="${names}:${OPTARG}:";;
               \?) return 1;;
           esac
     done
@@ -65,8 +66,9 @@ html2mail() {
     '`"
     sed=""
     for link in ${links}; do
-        cid="` html2mail_url2cid  "${link}"`"
-        file="`html2mail_url2file "${link}"`"
+        cid="` html2mail_url2cid  "${link}"           `"
+        file="`html2mail_url2file "${link}"           `"
+        name="`html2mail_url2name "${link}" "${html}" `"
         sed="${sed}s|${link}|cid:${cid}|g
         "
         if test -f "${file}"; then
@@ -76,19 +78,24 @@ html2mail() {
             esac
             echo "--${sep}"
             echo "Content-ID: <${cid}>"
-            
             case "${mime}" in
                 *image*)
                     echo "Content-Type: ${mime}"
                     echo "Content-Disposition: inline"
                     echo "Content-Transfer-Encoding: base64"
                     echo ""
-                    base64 "${file}"
+                    case ":${name}:" in
+                        ${names}) echo "{{V:${name}}}";;
+                        *)        base64 "${file}"    ;;
+                    esac
                     ;;
                 *)
                     echo "Content-Type: ${mime}"
                     echo ""
-                    cat "${file}"
+                    case ":${name}:" in
+                        ${names}) echo "{{V:${name}}}";;
+                        *)        cat "${file}"       ;;
+                    esac
                     ;;
             esac
         fi >> "${tmp}"
@@ -117,12 +124,20 @@ html2mail_check_programs() {
         error "Command 'html2' not found."
         ret=1
     fi
+    if ! which "xml2" >/dev/null 2>&1; then
+        error "Command 'xml2' not found."
+        ret=1
+    fi
     if ! which "mktemp" >/dev/null 2>&1; then
         error "Command 'mktemp' not found."
         ret=1
     fi
     if ! which "md5sum" >/dev/null 2>&1; then
         error "Command 'md5sum' not found."
+        ret=1
+    fi
+    if ! which "hxselect" >/dev/null 2>&1; then
+        error "Command 'hxselect' not found."
         ret=1
     fi
     return ${ret}
@@ -137,6 +152,10 @@ html2mail_url2file() {
         *)     echo "${HTML2MAIL_DIR_REL}/${1}";;
     esac
 }
+html2mail_url2name() {
+    hxselect "img[src='${1}']" < "${2}" | xml2 | sed -n 's|/img/@name=||p'
+}
+
 ## -----------------------------------------------------------------------------
 error() { echo "${SCRNAME}: error: $*" >&2; }
 html2mail_check_programs
