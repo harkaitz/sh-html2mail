@@ -19,7 +19,7 @@ Example 2:
 
 html2mail
 
-    Usage: html2mail [-D DIR][-s SUBJECT][-t TO] HTML-FILE > MAIL
+    Usage: html2mail [-D DIR][-s SUBJECT][-t TO][-n name] HTML-FILE > MAIL
     
     Convert a local HTML file into a multipart that can be sent with
     msmtp(1) or sendmail(1). Links that start with "/" will be searched

@@ -64,13 +64,17 @@ html2mail() {
     s|.*img/@src=||p
     s|.*head/link/@href=||p
     '`"
+    links="${links} `grep -oh 'url([^)]*)' "${html}" | sed 's|url(\(.*\))|\1|'`"
+    
     sed=""
     for link in ${links}; do
-        cid="` html2mail_url2cid  "${link}"           `"
         file="`html2mail_url2file "${link}"           `"
-        name="`html2mail_url2name "${link}" "${html}" `"
-        sed="${sed}s|${link}|cid:${cid}|g
-        "
+        if test -n "${file}"; then
+            cid="` html2mail_url2cid  "${link}"           `"
+            name="`html2mail_url2name "${link}" "${html}" `"
+            sed="${sed}s|${link}|cid:${cid}|g
+            "
+        fi
         if test -f "${file}"; then
             case "${file}" in
                 *.css) mime="text/css; charset=UTF-8";;
@@ -107,7 +111,7 @@ html2mail() {
         echo "Subject: ${sub}"
     fi
     echo "MIME-Version: 1.0"
-    echo "Content-Type: multipart/alternative; boundary=\"${sep}\""
+    echo "Content-Type: multipart/mixed; boundary=\"${sep}\""
     echo ""
     echo "--${sep}"
     echo "Content-Type: text/html; charset=UTF-8"
@@ -149,6 +153,7 @@ html2mail_url2file() {
     case "${1}" in
         /*)    test ! -n "${HTML2MAIL_DIR_ABS}" || echo "${HTML2MAIL_DIR_ABS}${1}";;
         *://*) true;;
+        \{*)   true;;
         *)     echo "${HTML2MAIL_DIR_REL}/${1}";;
     esac
 }
