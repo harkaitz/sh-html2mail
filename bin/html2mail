@@ -158,7 +158,7 @@ html2mail_url2file() {
     esac
 }
 html2mail_url2name() {
-    hxselect "img[src='${1}']" < "${2}" | xml2 | sed -n 's|/img/@name=||p'
+    hxselect "img[src='${1}']" < "${2}" | xml2 2>/dev/null | sed -n 's|/img/@name=||p'
 }
 
 ## -----------------------------------------------------------------------------
