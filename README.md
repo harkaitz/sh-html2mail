@@ -1,33 +1,31 @@
-# HTML2MAIL
-
-This little scripts bundles an html file and all it's css/images in
-a multipart email so that you can send it by sendmail/msmtp.
-
-Example 1:
-
-    > html2mail -t YOUR-EMAIL -s SUBJECT example/example.html | msmtp -t
-
-Example 2:
-
-    > msmtp -t <<-EOF
-    To: YOUR-EMAIL
-    Subject: SUBJECT
-    `html2mail example/example.html`
-    EOF
-
 ## Help
 
-html2mail
+hodt2doc
 
-    Usage: html2mail [-D DIR][-s SUBJECT][-t TO][-n name] HTML-FILE > MAIL
+    Usage: hodt2doc ODT DOC
     
-    Convert a local HTML file into a multipart that can be sent with
-    msmtp(1) or sendmail(1). Links that start with "/" will be searched
-    for in "DIR" if specified.
+    Transform an Open Office ODT file to DOC using `soffice command.
+
+hodt2html
+
+    Usage: hodt2html ODT DIR
     
-    Remember:
+    Convert ODT files to HTML format.
+
+hodt2pdf
+
+    Usage: hodt2pdf ODT PDF
     
-    1.- GMail doesn't support linking css, must be inline.
+    Transform an Open Office ODT file to PDF using `soffice` command.
+
+icon-tool
+
+    Usage: icon-tool ...
+    
+    Icon and logo check and transformation tool.
+    
+    ... get-size [FILE|SIZE] : Get size, list sizes.
+    ... android-app  ...     : Android app operations.
 
 ## Collaborating
 
