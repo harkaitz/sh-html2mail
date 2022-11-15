@@ -1,31 +1,16 @@
 ## Help
 
-hodt2doc
+html2mail
 
-    Usage: hodt2doc ODT DOC
+    Usage: html2mail [-D DIR][-s SUBJECT][-t TO][-n name] HTML-FILE > MAIL
     
-    Transform an Open Office ODT file to DOC using `soffice command.
-
-hodt2html
-
-    Usage: hodt2html ODT DIR
+    Convert a local HTML file into a multipart that can be sent with
+    msmtp(1) or sendmail(1). Links that start with "/" will be searched
+    for in "DIR" if specified.
     
-    Convert ODT files to HTML format.
-
-hodt2pdf
-
-    Usage: hodt2pdf ODT PDF
+    Remember:
     
-    Transform an Open Office ODT file to PDF using `soffice` command.
-
-icon-tool
-
-    Usage: icon-tool ...
-    
-    Icon and logo check and transformation tool.
-    
-    ... get-size [FILE|SIZE] : Get size, list sizes.
-    ... android-app  ...     : Android app operations.
+    1.- GMail doesn't support linking css, must be inline.
 
 ## Collaborating
 
